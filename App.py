@@ -45,15 +45,13 @@ def read_file(file):
         return ""
 
 
+    """def read_pdf(file):
+        reader = PdfReader(file)
+        return "".join([page.extract_text() or "" for page in reader.pages])
 
-
-"""def read_pdf(file):
-    reader = PdfReader(file)
-    return "".join([page.extract_text() or "" for page in reader.pages])
-
-def read_docx(file):
-    doc = Document(file)
-    return "\n".join([p.text for p in doc.paragraphs])"""
+    def read_docx(file):
+        doc = Document(file)
+        return "\n".join([p.text for p in doc.paragraphs])"""
 
 
 # Load models
