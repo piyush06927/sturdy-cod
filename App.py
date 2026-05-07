@@ -9,8 +9,9 @@ import spacy
 st.set_page_config(page_title="CV Matcher", layout="wide")
 
 # Title
-st.title("CV vs Job Description Matcher")
-
+st.title("AI CV Matcher")
+st.markdown("Upload your CV and a job description")
+  
 # Sidebar for file uploads
 st.sidebar.header("Upload Files")
 cv_file = st.sidebar.file_uploader("Upload your CV (PDF)", type=["pdf"])
@@ -49,6 +50,22 @@ def extract_skills(text):
             skills.add(token.text.lower())
     return skills
 
+# Additional skills input
+additional_skills = st.text_area(
+    "Enter additional skills (comma-separated)",
+    placeholder="Python, AWS, Docker"
+)
+
+extra_skills = set()
+
+if additional_skills:
+    extra_skills = set(
+        skill.strip().lower()
+        for skill in additional_skills.split(",")
+        if skill.strip()
+    )
+
+
 # Main analysis
 if cv_file and jd_file:
     cv_text = read_pdf(cv_file)
@@ -58,12 +75,21 @@ if cv_file and jd_file:
     else:
         jd_text = jd_file.read().decode("utf-8")
     
-    # Calculate scores
+    # Semantic similarity
     semantic_score = get_similarity(cv_text, jd_text)
+
+    # Extract skills
     jd_skills = extract_skills(jd_text)
     cv_skills = extract_skills(cv_text)
+
+# Add Manually Entered Skills
+    jd_skills = jd_skills.union(extra_skills)
+
+    #Compare Skills
     matched = jd_skills & cv_skills
     missing = jd_skills - cv_skills
+
+    #Skill score calculation
     
     skill_score = len(matched) / len(jd_skills) if len(jd_skills) > 0 else 0
     overall = (0.6 * skill_score) + (0.4 * semantic_score)
@@ -88,3 +114,5 @@ if cv_file and jd_file:
         st.write(", ".join(sorted(missing)) if missing else "All skills present!")
 else:
     st.info("👈 Please upload both files in the sidebar to begin analysis")
+
+
