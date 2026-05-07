@@ -146,5 +146,6 @@ if cv_file and jd_file:
         st.write(", ".join(sorted(missing)) if missing else "All skills present!")
 else:
     st.info("👈 Please upload both files in the sidebar to begin analysis")
+#END OF CODE
 
 
