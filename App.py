@@ -14,17 +14,47 @@ st.markdown("Upload your CV and a job description")
   
 # Sidebar for file uploads
 st.sidebar.header("Upload Files")
-cv_file = st.sidebar.file_uploader("Upload your CV (PDF)", type=["pdf"])
-jd_file = st.sidebar.file_uploader("Upload Job Description (DOCX or TXT)", type=["docx", "txt"])
+cv_file = st.sidebar.file_uploader(
+    "Upload your CV",
+    type=["pdf", "docx", "txt"]
+)
 
+jd_file = st.sidebar.file_uploader(
+    "Upload Job Description",
+    type=["pdf", "docx", "txt"]
+)
 # File reading functions
-def read_pdf(file):
+def read_file(file):
+
+    if file.name.endswith(".pdf"):
+        reader = PdfReader(file)
+        return "".join(
+            [page.extract_text() or "" for page in reader.pages]
+        )
+
+    elif file.name.endswith(".docx"):
+        doc = Document(file)
+        return "\n".join(
+            [p.text for p in doc.paragraphs]
+        )
+
+    elif file.name.endswith(".txt"):
+        return file.read().decode("utf-8")
+
+    else:
+        return ""
+
+
+
+
+"""def read_pdf(file):
     reader = PdfReader(file)
     return "".join([page.extract_text() or "" for page in reader.pages])
 
 def read_docx(file):
     doc = Document(file)
-    return "\n".join([p.text for p in doc.paragraphs])
+    return "\n".join([p.text for p in doc.paragraphs])"""
+
 
 # Load models
 @st.cache_resource
@@ -68,12 +98,14 @@ if additional_skills:
 
 # Main analysis
 if cv_file and jd_file:
-    cv_text = read_pdf(cv_file)
+    cv_text = read_file(cv_file)
+    jd_text = read_file(jd_file)
+    """cv_text = read_pdf(cv_file)
     
     if jd_file.name.endswith(".docx"):
         jd_text = read_docx(jd_file)
     else:
-        jd_text = jd_file.read().decode("utf-8")
+        jd_text = jd_file.read().decode("utf-8")"""
     
     # Semantic similarity
     semantic_score = get_similarity(cv_text, jd_text)
