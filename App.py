@@ -139,5 +139,6 @@ if cv_file and jd_file:
 else:
     st.info("👈 Please upload both files in the sidebar to begin analysis")
 #END OF CODE
+#Thank you
 
 
