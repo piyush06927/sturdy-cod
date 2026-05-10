@@ -1,0 +1,8 @@
+notebooks/data
+notebooks/cifar_net.pth
+.ipynb_checkpoints/
+venv/
+__pycache__/
+.vscode/
+*.pyc
+.DS_Store
