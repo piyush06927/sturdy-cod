@@ -140,6 +140,4 @@ else:
     st.info("👈 Please upload both files in the sidebar to begin analysis")
 #END OF CODE
 #Thank you
-#TESTING
-#test123
 
