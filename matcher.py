@@ -1,33 +1,36 @@
+import streamlit as st
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-import streamlit as st
+
 
 @st.cache_resource
 def load_model():
+
     return SentenceTransformer(
         "all-MiniLM-L6-v2"
     )
 
+
 model = load_model()
 
 
-def calculate_match_score(cv_text, jd_text):
+def get_embedding(text):
 
-    cv_embedding = model.encode(
-        cv_text,
+    return model.encode(
+        text,
         convert_to_numpy=True,
         normalize_embeddings=True
     )
 
-    jd_embedding = model.encode(
-        jd_text,
-        convert_to_numpy=True,
-        normalize_embeddings=True
-    )
+
+def semantic_similarity(text1, text2):
+
+    emb1 = get_embedding(text1)
+    emb2 = get_embedding(text2)
 
     similarity = cosine_similarity(
-        [cv_embedding],
-        [jd_embedding]
+        [emb1],
+        [emb2]
     )[0][0]
 
-    return similarity
+    return float(similarity)

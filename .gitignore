@@ -2,6 +2,7 @@ notebooks/data
 notebooks/cifar_net.pth
 .ipynb_checkpoints/
 venv/
+.env
 __pycache__/
 .vscode/
 *.pyc
