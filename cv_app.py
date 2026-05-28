@@ -1,143 +1,201 @@
 import streamlit as st
-from PyPDF2 import PdfReader
-from docx import Document
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-import spacy
+from parser import read_file
+from matcher import calculate_match_score
+from skills import extract_skills, generate_recommendations
 
-# Page configuration
-st.set_page_config(page_title="CV Matcher", layout="wide")
+# ---------------- PAGE CONFIG ---------------- #
 
-# Title
-st.title("AI CV Matcher")
-st.markdown("Upload your CV and a job description")
-  
-# Sidebar for file uploads
-st.sidebar.header("Upload Files")
-cv_file = st.sidebar.file_uploader(
-    "Upload your CV",
-    type=["pdf", "docx", "txt"]
+st.set_page_config(
+    page_title="AI CV Matcher",
+    page_icon="📄",
+    layout="wide"
 )
 
-jd_file = st.sidebar.file_uploader(
-    "Upload Job Description",
-    type=["pdf", "docx", "txt"]
-)
-# File reading functions
-def read_file(file):
+# ---------------- CUSTOM CSS ---------------- #
 
-    if file.name.endswith(".pdf"):
-        reader = PdfReader(file)
-        return "".join(
-            [page.extract_text() or "" for page in reader.pages]
-        )
+st.markdown("""
+<style>
 
-    elif file.name.endswith(".docx"):
-        doc = Document(file)
-        return "\n".join(
-            [p.text for p in doc.paragraphs]
-        )
+.main {
+    padding-top: 1rem;
+}
 
-    elif file.name.endswith(".txt"):
-        return file.read().decode("utf-8")
+.stButton button {
+    width: 100%;
+    border-radius: 10px;
+    height: 50px;
+    font-size: 18px;
+    font-weight: bold;
+}
 
-    else:
-        return ""
+.skill-box {
+    padding: 10px;
+    border-radius: 10px;
+    background-color: #1E1E1E;
+    margin-bottom: 10px;
+}
 
+</style>
+""", unsafe_allow_html=True)
 
-    """def read_pdf(file):
-        reader = PdfReader(file)
-        return "".join([page.extract_text() or "" for page in reader.pages])
+# ---------------- SIDEBAR ---------------- #
 
-    def read_docx(file):
-        doc = Document(file)
-        return "\n".join([p.text for p in doc.paragraphs])"""
+with st.sidebar:
+    st.title("📄 AI CV Matcher")
 
+    st.markdown("---")
 
-# Load models
-@st.cache_resource
-def load_models():
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    nlp = spacy.load("en_core_web_sm")
-    return model, nlp
+    st.info(
+        """
+        Upload:
+        - Resume/CV
+        - Job Description
 
-model, nlp = load_models()
+        Get:
+        - Semantic similarity
+        - Skill matching
+        - ATS-style recommendations
+        """
+    )
 
-# Similarity function
-def get_similarity(text1, text2):
-    emb1 = model.encode(text1)
-    emb2 = model.encode(text2)
-    return cosine_similarity([emb1], [emb2])[0][0]
+    cv_file = st.file_uploader(
+        "Upload CV",
+        type=["pdf", "docx", "txt"]
+    )
 
-# Extract skills
-def extract_skills(text):
-    doc = nlp(text)
-    skills = set()
-    for token in doc:
-        if token.pos_ in ["NOUN", "PROPN"]:
-            skills.add(token.text.lower())
-    return skills
+    jd_file = st.file_uploader(
+        "Upload Job Description",
+        type=["pdf", "docx", "txt"]
+    )
 
-# Additional skills input
+# ---------------- MAIN UI ---------------- #
+
+st.title("📄 AI CV Matcher")
+st.caption("AI-powered resume screening using semantic embeddings and NLP")
+
 additional_skills = st.text_area(
-    "Enter additional skills (comma-separated)",
+    "Additional Skills (comma-separated)",
     placeholder="Python, AWS, Docker"
 )
 
 extra_skills = set()
 
 if additional_skills:
-    extra_skills = set(
+    extra_skills = {
         skill.strip().lower()
         for skill in additional_skills.split(",")
         if skill.strip()
-    )
+    }
 
+# ---------------- ANALYSIS ---------------- #
 
-# Main analysis
 if cv_file and jd_file:
-    cv_text = read_file(cv_file)
-    jd_text = read_file(jd_file)
-    
-    # Semantic similarity
-    semantic_score = get_similarity(cv_text, jd_text)
 
-    # Extract skills
-    jd_skills = extract_skills(jd_text)
-    cv_skills = extract_skills(cv_text)
+    with st.spinner("Analyzing CV..."):
 
-# Add Manually Entered Skills
-    jd_skills = jd_skills.union(extra_skills)
+        cv_text = read_file(cv_file)
+        jd_text = read_file(jd_file)
 
-    #Compare Skills
-    matched = jd_skills & cv_skills
-    missing = jd_skills - cv_skills
+        semantic_score = calculate_match_score(
+            cv_text,
+            jd_text
+        )
 
-    #Skill score calculation
-    
-    skill_score = len(matched) / len(jd_skills) if len(jd_skills) > 0 else 0
-    overall = (0.6 * skill_score) + (0.4 * semantic_score)
-    
-    # Display results
+        cv_skills = extract_skills(cv_text)
+        jd_skills = extract_skills(jd_text)
+
+        jd_skills = jd_skills.union(extra_skills)
+
+        matched_skills = cv_skills & jd_skills
+        missing_skills = jd_skills - cv_skills
+
+        skill_score = (
+            len(matched_skills) / len(jd_skills)
+            if len(jd_skills) > 0 else 0
+        )
+
+        overall_score = (
+            0.7 * semantic_score +
+            0.3 * skill_score
+        )
+
+        recommendations = generate_recommendations(
+            missing_skills
+        )
+
+    # ---------------- METRICS ---------------- #
+
+    st.subheader("📊 Match Results")
+
     col1, col2, col3 = st.columns(3)
+
     with col1:
-        st.metric("Overall Match", f"{overall*100:.1f}%")
+        st.metric(
+            "Overall Match",
+            f"{overall_score * 100:.1f}%"
+        )
+
     with col2:
-        st.metric("Skill Match", f"{skill_score*100:.1f}%")
+        st.metric(
+            "Semantic Match",
+            f"{semantic_score * 100:.1f}%"
+        )
+
     with col3:
-        st.metric("Semantic Match", f"{semantic_score*100:.1f}%")
-    
+        st.metric(
+            "Skill Match",
+            f"{skill_score * 100:.1f}%"
+        )
+
+    st.progress(float(overall_score))
+
     st.divider()
-    
+
+    # ---------------- SKILLS ---------------- #
+
     col1, col2 = st.columns(2)
+
     with col1:
         st.subheader("✅ Matched Skills")
-        st.write(", ".join(sorted(matched)) if matched else "No skills matched")
+
+        if matched_skills:
+            for skill in sorted(matched_skills):
+                st.success(skill)
+
+        else:
+            st.warning("No matched skills found.")
+
     with col2:
         st.subheader("❌ Missing Skills")
-        st.write(", ".join(sorted(missing)) if missing else "All skills present!")
+
+        if missing_skills:
+            for skill in sorted(missing_skills):
+                st.error(skill)
+
+        else:
+            st.success("All required skills found!")
+
+    st.divider()
+
+    # ---------------- RECOMMENDATIONS ---------------- #
+
+    st.subheader("💡 ATS Recommendations")
+
+    if recommendations:
+        for rec in recommendations:
+            st.info(rec)
+
+    else:
+        st.success("Excellent alignment with the job description.")
+
+    # ---------------- EXPANDERS ---------------- #
+
+    with st.expander("📄 View Extracted CV Skills"):
+        st.write(sorted(cv_skills))
+
+    with st.expander("📋 View Extracted Job Skills"):
+        st.write(sorted(jd_skills))
+
 else:
-    st.info("👈 Please upload both files in the sidebar to begin analysis")
-#END OF CODE
-#Thank you
+    st.info("👈 Upload both files to begin analysis")
 
